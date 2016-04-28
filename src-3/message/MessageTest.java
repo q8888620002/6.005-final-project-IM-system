@@ -64,7 +64,7 @@ public class MessageTest {
 	}
 	
 	/*
-	 * Convert a json string to a join-type-ConvOps Message
+	 * Convert a json string to a leave-type-ConvOps Message
 	 */
 	@Test
 	public void LeaveRoomTest(){

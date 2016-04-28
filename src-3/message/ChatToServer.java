@@ -71,9 +71,10 @@ public class ChatToServer implements ToServerMessage{
 	
 	/**
 	 *  accept a visitor to handle this message 
+	 * @throws ErrorTypeException 
 	 */
 	@Override
-	public <T> void accept(ServerMessageVisitor<T> v) {
+	public <T> void accept(ServerMessageVisitor<T> v) throws ErrorTypeException {
 		v.visit(this);
 	}
 

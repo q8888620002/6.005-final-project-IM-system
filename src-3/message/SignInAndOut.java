@@ -58,9 +58,10 @@ public class SignInAndOut implements ToServerMessage{
 
 	/**
 	 * Allow visitor to visit a signinandout object
+	 * @throws ErrorTypeException 
 	 */
 	@Override
-	public <T> void accept(ServerMessageVisitor<T> v) {
+	public <T> void accept(ServerMessageVisitor<T> v) throws ErrorTypeException {
 		v.visit(this);
 	}
 

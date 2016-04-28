@@ -9,8 +9,9 @@ import java.util.HashMap;
 
 import com.sun.javafx.collections.MappingChange.Map;
 import com.sun.org.apache.xml.internal.resolver.helpers.PublicId;
+import com.sun.swing.internal.plaf.synth.resources.synth;
 
-import userInfo.InputHandler;
+import userInfo.ChatHandler;
 import userInfo.UserInfo;
 
 /**
@@ -21,7 +22,7 @@ import userInfo.UserInfo;
  * 		
  */
 public class ChatServer {
-	private  ServerSocket server;
+	private final ServerSocket server;
 	private final HashMap<String, UserInfo> users;
 	private final HashMap<String, Conversation> allConvs;
 	/**
@@ -61,7 +62,7 @@ public class ChatServer {
     	    	// passing the client socket to a new clientHandler thread
     	    	try {
     	    		System.err.println("handling incoming connection");
-    	    		new InputHandler(clientSocket, this).start();
+    	    		new ChatHandler(clientSocket, this).start();
     	    		
     			} catch (Exception e) {
     				e.printStackTrace();		
@@ -84,7 +85,7 @@ public class ChatServer {
      * debugger method for onlineUser hashMap
      * @return a string representation of onlineUser
      */
-    public HashMap<String, UserInfo> getUsers(){
+    public synchronized HashMap<String, UserInfo> getUsers(){
     	return users;
     }
     
@@ -92,15 +93,23 @@ public class ChatServer {
      * get the total number of online users
      * @return an Integer of user number
      */
-    public int getUserNumber(){
+    public synchronized int getUserNumber(){
     	return users.size();
+    }
+    
+    /**
+     * get the total number of accessible conversations 
+     * @return an Integer of user number
+     */
+    public synchronized int getConvsNumber(){
+    	return allConvs.size();
     }
     
     /**
      * debugger method of conversation hashmap in the erver
      * @return a string representation of AllConvs
      */ 
-    public HashMap<String, Conversation> getConvs(){
+    public synchronized HashMap<String, Conversation> getConvs(){
     	return allConvs;
     }
     

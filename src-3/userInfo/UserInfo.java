@@ -9,17 +9,15 @@ package userInfo;
  *   
  */
 public class UserInfo {
-		private final InputHandler input;
-		private final OutputHandler output;
-		
+		private final ChatHandler input;
+	
 		/**
 		 * Create a UserInfo 
 		 * @param input, InputHandler of the user
 		 * @param out, OutputHandler of the user
 		 */
-		public UserInfo(InputHandler input, OutputHandler out){
+		public UserInfo(ChatHandler input){
 			this.input = input;
-			this.output = out;
 		}
 		
 		

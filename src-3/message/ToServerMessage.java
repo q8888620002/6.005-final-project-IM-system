@@ -18,8 +18,9 @@ public interface ToServerMessage extends Message{
 	    /**
 	     * accept method for visitor to visit 
 	     * @param <T>
+	     * @throws ErrorTypeException 
 	     */
-	    public <T> void accept(ServerMessageVisitor<T> v);
+	    public <T> void accept(ServerMessageVisitor<T> v) throws ErrorTypeException;
 	    /**
 	     *  Enum type of ToServer Message
 	     */

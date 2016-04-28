@@ -62,9 +62,10 @@ public class ConvOps implements ToServerMessage{
 
 	/**
 	 * allow visitor to visit this object
+	 * @throws ErrorTypeException 
 	 */
 	@Override
-	public <T> void accept(ServerMessageVisitor<T> v) {
+	public <T> void accept(ServerMessageVisitor<T> v) throws ErrorTypeException {
 		v.visit(this);
 	}
 	

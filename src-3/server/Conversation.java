@@ -2,10 +2,11 @@ package server;
 
 import java.util.HashMap;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
-import com.sun.corba.se.impl.protocol.giopmsgheaders.Message;
+import message.ToServerMessage;
+import userInfo.ChatHandler;
 
-import userInfo.OutputHandler;
 
 /*
  * Model of the MVC, a mutable data-type that stores conversations between clients. 
@@ -17,55 +18,77 @@ import userInfo.OutputHandler;
  */
 
 public class Conversation extends Thread{
-	private HashMap<String, OutputHandler> users = new HashMap<String, OutputHandler>();	
-	private BlockingQueue<Message> queue;
+	private final HashMap<String, ChatHandler> users = new HashMap<String, ChatHandler>();	
+	private final BlockingQueue<ToServerMessage> queue = new LinkedBlockingQueue<ToServerMessage>();
 	private final String name;
 	
 	/**
-	 * Create a conversation 
+	 * Constructor of the conversation 
+	 * @param String, name of this conversation 
+	 * @param BlockingQueue of this conversation shared among threads
 	 */
 	
 	public Conversation(String Name){
 		this.name = Name;
-		
 	}
 	
 	/**
-	 * Run method for the conversation thread, wait and take the blockigng queue
+	 * Run method for the conversation thread, the conversation will block if blocking queue is empty or full
 	 */
-	private void Run(){
-		
+	@Override
+	public void run(){
+		while(true){
+			try {
+				// take the queue from other thread and deal with it
+				
+				ToServerMessage message = queue.take();
+				try {
+					
+					HandleQueue(message);
+					
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
 	}
 	
 	/**
 	 * Handling the queue, turning it into action  such as addClient or removeClient
 	 * @param message, ADT of the queue
 	 */
-	private void HandleQueue(Message message){
+	private void HandleQueue(ToServerMessage message){
 		
 	}
 	
 	/**
 	 * Add a new client to listen to this conversation 
+	 * This method is synchronized 
 	 * @param user , the string representation of user
+	 * @param ChatHandler of the client 
 	 */
-	private void addClient(String username){
-		
+	public synchronized void addClient(String username, ChatHandler handler){
+			users.put(username, handler);
 	}
 	
 	/**
 	 * remove a existing client who listens to this conversation 
+	 * This method is synchronized 
 	 * @param user , the string representation of user
+	 * @param ChatHandler of the correspond user 
+	 * 
 	 */
-	private void removeClient(String username){
-		
+	public synchronized void removeClient(String username, ChatHandler handler){
+		users.remove(username, handler);
 	}
 	
 	/**
 	 * Called by input handler who update a queue onto BlockingQueue of this conversation 
 	 * @param queue, a Message that contains action to be performed 
 	 */
-	public void updateMessage(Message queue){
+	public void updateMessage(ToServerMessage queue){
 		
 	}
 	
@@ -73,9 +96,25 @@ public class Conversation extends Thread{
 	 * Get the current name of users who are in this room
 	 * @return
 	 */
-	private String getUsers(){
-		return null;
+	public synchronized HashMap<String, ChatHandler> getUsers(){
+		return users;
 	}
 	
+	/**
+	 * Get the number of user in this conversation 
+	 * This method is synchronized
+	 * @return int , number of user who is in this converation 
+	 */
+	public synchronized int getUserNum(){
+		return users.size();
+	}
+	
+	/**
+	 * Debugger method for conversation 
+	 * @return String, name of this conversation 
+	 */
+	public String getRoomName(){
+		return name;
+	}
 	
 }
