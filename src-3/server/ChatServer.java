@@ -25,6 +25,7 @@ public class ChatServer {
 	private final ServerSocket server;
 	private final HashMap<String, UserInfo> users;
 	private final HashMap<String, Conversation> allConvs;
+	
 	/**
 	 * Constructor of the ChatServer that opening a serversocket connection and 
 	 * catch an Exception if an I/O error occurred. 
@@ -38,6 +39,18 @@ public class ChatServer {
 			this.allConvs = new HashMap<String,Conversation>();
 			checkRep();
 	}
+	
+	/**
+	 * Constructor of ChatServer  
+	 * @param socket, Server socket if provided
+	 * @throws IOException
+	 */
+	public ChatServer(ServerSocket socket)throws IOException{
+		this.server = socket;
+		this.users  = new HashMap<String,UserInfo>();
+		this.allConvs = new HashMap<String,Conversation>();
+		checkRep();
+}
 	
 	/**
 	 * check the rep invariant of ChatServer
@@ -54,7 +67,6 @@ public class ChatServer {
     public void serve() throws IOException{
     	System.err.println("server starts!");
     	while (true) {
-			
     		try {
     			System.err.println("server is waiting");
     	    	
@@ -62,7 +74,7 @@ public class ChatServer {
     	    	// passing the client socket to a new clientHandler thread
     	    	try {
     	    		System.err.println("handling incoming connection");
-    	    		new ChatHandler(clientSocket, this).start();
+    	    		new Thread(new ChatHandler(clientSocket, this)).start();
     	    		
     			} catch (Exception e) {
     				e.printStackTrace();		

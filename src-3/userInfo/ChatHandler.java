@@ -2,6 +2,9 @@ package userInfo;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.concurrent.BlockingQueue;
@@ -39,22 +42,39 @@ import server.Conversation;
  *      server is final 
  * 		
  */
-public class ChatHandler extends Thread implements ServerMessageVisitor<Void>{
+public class ChatHandler implements Runnable ,ServerMessageVisitor<Void>{
 		private final ChatServer server;
 	    private final Socket clientSocket;
-		private BufferedReader in;
+		private final BufferedReader in;
 		private final HashMap<String, Conversation> convs = new HashMap<String, Conversation>();
 		private final BlockingQueue<Message> outputqueue = new LinkedBlockingQueue<Message>();
-		
+		private final PrintWriter out;
 		
 		/**
 		 * Create an InputHandler 
 		 * @param client, socket connection of client 
 		 * @param ChatServer 
+		 * @throws IOException 
+		 * @throws ErrorTypeException 
+		 * @throws JsonSyntaxException 
 		 */
-		public ChatHandler(Socket client,ChatServer server){
+		public ChatHandler(Socket client,ChatServer server) throws IOException, JsonSyntaxException, ErrorTypeException{
 			this.clientSocket = client;
 			this.server = server;
+			in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+			out = new PrintWriter(clientSocket.getOutputStream(), true);
+			
+			
+			out.println("Please enter your name");
+			out.flush();
+			
+			String loginRequest = in.readLine(); 
+			
+			if(loginRequest != null)
+				parseMessage(loginRequest);
+			else 
+				throw new IOException("No login request!");
+			
 		}
 		
 		/**
@@ -64,24 +84,32 @@ public class ChatHandler extends Thread implements ServerMessageVisitor<Void>{
 		 * @throws JsonSyntaxException 
 		 */
 		private void handleRequest() throws IOException, JsonSyntaxException, ErrorTypeException{
-			in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+			
 			String input = in.readLine(); 
 			while(input!=null){
-				createMessage(input);
+				parseMessage(input);
 				in.readLine();
 			}
 		}
+
 		
 		/**
 		 * Run method of input handler to handling input from client socket
-		 * @throws ErrorTypeException 
-		 * @throws JsonSyntaxException 
 		 */
-		public void Run() throws JsonSyntaxException, ErrorTypeException{
+		@Override
+		public void run(){
+			
+			out.println("Receiving Message from Server..");
 			try {
 				handleRequest();
+				
 				} catch (IOException e) {
-			}
+					e.printStackTrace();
+				} catch (JsonSyntaxException e) {
+					e.printStackTrace();
+				} catch (ErrorTypeException e) {
+					e.printStackTrace();
+				}
 		}
 		
 		/**
@@ -90,13 +118,19 @@ public class ChatHandler extends Thread implements ServerMessageVisitor<Void>{
 		 * @throws ErrorTypeException 
 		 * @throws JsonSyntaxException 
 		 */
-		private void createMessage(String jsonString) throws ErrorTypeException, JsonSyntaxException{
+		private void parseMessage(String jsonString) throws ErrorTypeException, JsonSyntaxException{
+			
 			GsonBuilder  gsonBuilder = new GsonBuilder();
+			
 			gsonBuilder.registerTypeAdapter(Message.class, new MessageFactory());
-			ToServerMessage Message = gsonBuilder.create().fromJson(jsonString, Message.class);
+			Gson gson = gsonBuilder.create();
+			
+			ToServerMessage Message = gson.fromJson(jsonString, Message.class);
+			
 			/*
 			 * Make InputHandler to handle the message
 			 */
+			
 			Message.accept(this);
 		}
 		
@@ -110,11 +144,16 @@ public class ChatHandler extends Thread implements ServerMessageVisitor<Void>{
 			ToServer log =  s.getType();
 			
 			if(log == ToServer.SIGNIN){
+				
 				// check if the user name is valid
 				if(checkName(username)){
+					
+					out.println("Welcome "+username+" your name is available.");
+					out.flush();
 					AddUser(username);
 				}else{
-					System.err.println("this name is not valid.");
+					out.println("this name is not valid. Please enter a new one");
+					out.flush();
 				}
 			}else if(log == ToServer.SIGNOUT){
 				
@@ -150,6 +189,8 @@ public class ChatHandler extends Thread implements ServerMessageVisitor<Void>{
 					if(server.getConvs().containsKey(convName)){ 
 						// add user to this conversation 
 						Conversation conv = server.getConvs().get(convName);
+						// add conversation to this chat handler 
+						convs.put(convName, conv);
 						conv.addClient(username,this);
 						System.err.println(username+" joined room "+ convName);
 					}else{
@@ -160,18 +201,28 @@ public class ChatHandler extends Thread implements ServerMessageVisitor<Void>{
 						System.err.println(username +" created room "+ convName);
 						
 						Conversation conv = server.getConvs().get(convName);
+						
+						convs.put(convName, conv);
+
 						conv.addClient(username, this );
 					}
 					// should not get here	
 				}
 			}else if (type == ToServer.LEAVE) {
-				
-					if(convs.containsKey(convName)){
-						convs.get(convName).removeClient(username, this);
-					}else{
+				synchronized (this) {
+					try {
+						if(convs.containsKey(convName)){
+							
+							convs.get(convName).removeClient(username, this);
+							
+							System.err.println(username+" just leave the conversation "+convName);
+						}
+					} catch (Exception e) {
 						
-						System.err.println("you are not in that room");
 					}
+					
+				}
+					
 				
 			}else{
 				// should not get here
@@ -206,6 +257,7 @@ public class ChatHandler extends Thread implements ServerMessageVisitor<Void>{
 		 * @param name string of user 
 		 */
 		private void AddUser(String username){
+			
 			synchronized (this) {
 				if(server.getUsers().containsKey(username)){
 					System.err.println("This name already been used");
@@ -296,5 +348,6 @@ public class ChatHandler extends Thread implements ServerMessageVisitor<Void>{
 		public void updateQueue(Message queue) throws InterruptedException {
 			outputqueue.put(queue);
 		}
-	
+
+		
 }

@@ -1,4 +1,4 @@
-package userInfo;
+package server;
 
 import static org.junit.Assert.*;
 
@@ -12,13 +12,14 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.google.gson.JsonSyntaxException;
 
 import message.ConvOps;
 import message.ErrorTypeException;
 import message.SignInAndOut;
-import server.ChatServer;
+import userInfo.ChatHandler;
 
-public class HandlerFuncTest {
+public class ConversationOperationTest {
 		private static ChatServer server;
 		private static Socket one;
 		private static ChatHandler onehandler;
@@ -28,16 +29,14 @@ public class HandlerFuncTest {
 		private static ChatHandler handler3;
 		
 		@BeforeClass
-		public  static void setUp() throws UnknownHostException, IOException{
+		public  static void setUp() throws UnknownHostException, IOException, JsonSyntaxException, ErrorTypeException{
 			new Thread(new Runnable() {
 				
 				@Override
 				public void run() {
 					try {
 						server = new ChatServer(10000);
-						
 						server.serve();
-						
 						
 					} catch (IOException e) {
 						e.printStackTrace();
@@ -56,7 +55,7 @@ public class HandlerFuncTest {
 		}
 		
 		/*
-		 * reset the server every test
+		 * reset the server after every test
 		 */
 		@After
 		public void Reset() throws IOException{
@@ -79,7 +78,7 @@ public class HandlerFuncTest {
 		 * Test validation of the username
 		 */
 		@Test
-		public void testNameValidation() throws UnknownHostException, IOException{
+		public void testNameValidation() throws UnknownHostException, IOException, JsonSyntaxException, ErrorTypeException{
 			
 			String username1 = "hello1234";
 			Socket client = new Socket("localhost", 10000);
@@ -161,7 +160,7 @@ public class HandlerFuncTest {
 		}
 		
 		/**
-		 * Test creating a conversation and joining another user afterwards
+		 * Test creating a conversation, joining, and leave the coversations
 		 * @throws ErrorTypeException 
 		 */
 		@Test
@@ -185,6 +184,19 @@ public class HandlerFuncTest {
 			handler3.visit(user3join);
 			
 			assertEquals(3, server.getConvs().get(convname).getUserNum());
+			
+
+			pause();
+			pause();
+			
+			
+			ConvOps user3leave = new ConvOps("user3", false, convname);
+			ConvOps user2leave = new ConvOps("user2", false, convname);
+			// user 2 , user3 leaving the conversation happiness 
+			handler2.visit(user2leave);
+			handler3.visit(user3leave);
+			
+			assertEquals(1, server.getConvs().get(convname).getUserNum());
 		}
 		
 }
