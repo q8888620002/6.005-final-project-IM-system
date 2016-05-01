@@ -19,10 +19,13 @@ import com.sun.corba.se.impl.protocol.giopmsgheaders.Message;
 
 import message.ChatToServer;
 import message.ConvOps;
+import message.ErrorMessage;
 import message.ErrorTypeException;
+import message.Hint;
 import message.MessageFactory;
 import message.ServerMessageVisitor;
 import message.SignInAndOut;
+import message.ToClientMessage;
 import message.ToServerMessage;
 import message.ToServerMessage.ToServer;
 import server.ChatServer;
@@ -47,8 +50,9 @@ public class ChatHandler implements Runnable ,ServerMessageVisitor<Void>{
 	    private final Socket clientSocket;
 		private final BufferedReader in;
 		private final HashMap<String, Conversation> convs = new HashMap<String, Conversation>();
-		private final BlockingQueue<Message> outputqueue = new LinkedBlockingQueue<Message>();
+		private final BlockingQueue<ToClientMessage> outputqueue = new LinkedBlockingQueue<ToClientMessage>();
 		private final PrintWriter out;
+		private final Thread outputThread;
 		
 		/**
 		 * Create an InputHandler 
@@ -64,52 +68,72 @@ public class ChatHandler implements Runnable ,ServerMessageVisitor<Void>{
 			in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 			out = new PrintWriter(clientSocket.getOutputStream(), true);
 			
+			outputThread = new Thread(){
+				@Override
+				public void run() {
+					while(true){
+						try {
+							ToClientMessage message = outputqueue.take();
+						
+							//System.out.println("Server writing output to port "
+			              //         + ": " + message.toJSONString());
+							try {
+								out.println(message.toJSONString());
+								out.flush();
+							} catch (Exception e) {
+								e.printStackTrace();
+								System.err.println("client connection error");
+							}
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+					}
+				}
+			};
 			
-			out.println("Please enter your name");
+			
+			out.println(new Hint("Please enter your name").toJSONString());
 			out.flush();
 			
 			String loginRequest = in.readLine(); 
 			
+			/*
+			 * loginRequest would be null if the client socket is closed
+			 */
 			if(loginRequest != null)
 				parseMessage(loginRequest);
 			else 
-				throw new IOException("No login request!");
+				throw new IOException("Client disconnected");
 			
-		}
-		
-		/**
-		 *  Handling the incoming input request from client side
-		 * @throws IOException 
-		 * @throws ErrorTypeException 
-		 * @throws JsonSyntaxException 
-		 */
-		private void handleRequest() throws IOException, JsonSyntaxException, ErrorTypeException{
-			
-			String input = in.readLine(); 
-			while(input!=null){
-				parseMessage(input);
-				in.readLine();
-			}
 		}
 
-		
 		/**
-		 * Run method of input handler to handling input from client socket
+		 * Run method of input handler to handling input request from client socket
 		 */
 		@Override
 		public void run(){
+			out.println(new Hint("Receiving Message from Server..").toJSONString());
+			/*
+			 * Start the Output thread and input handler thread 
+			 */
+			outputThread.start();
 			
-			out.println("Receiving Message from Server..");
-			try {
-				handleRequest();
-				
-				} catch (IOException e) {
-					e.printStackTrace();
-				} catch (JsonSyntaxException e) {
-					e.printStackTrace();
-				} catch (ErrorTypeException e) {
-					e.printStackTrace();
-				}
+			while (true) {
+				try {
+						String input = in.readLine(); 	
+						while(input!=null){
+							System.err.println(input);
+							parseMessage(input);
+							input = in.readLine();
+						}
+					} catch (IOException e) {
+						
+					} catch (JsonSyntaxException e) {
+						e.printStackTrace();
+					} catch (ErrorTypeException e) {
+						e.printStackTrace();
+					}
+			}
 		}
 		
 		/**
@@ -130,42 +154,54 @@ public class ChatHandler implements Runnable ,ServerMessageVisitor<Void>{
 			/*
 			 * Make InputHandler to handle the message
 			 */
-			
+		
 			Message.accept(this);
 		}
 		
 		/**
 		 * Visit method for InputHandler to handle with SignInAndOut
-		 * @throws ErrorTypeException 
 		 */
 		@Override
-		public Void visit(SignInAndOut s) throws ErrorTypeException {
+		public Void visit(SignInAndOut s) {
 			String username = s.getUser();
 			ToServer log =  s.getType();
-			
+		
 			if(log == ToServer.SIGNIN){
 				
 				// check if the user name is valid
 				if(checkName(username)){
 					
-					out.println("Welcome "+username+" your name is available.");
-					out.flush();
 					AddUser(username);
 				}else{
-					out.println("this name is not valid. Please enter a new one");
+					
+					out.println(new ErrorMessage("this name is not valid. Please enter a new one").toJSONString());
 					out.flush();
 				}
 			}else if(log == ToServer.SIGNOUT){
 				
 				if(server.getUsers().containsKey(username)){
+					
 					RemoveUser(username);
 				}else{
-					System.err.println("You cannot log out before logging in.");
+					
+					ErrorMessage error = new ErrorMessage("You're currently offline. You cannot sign out.");
+					try {
+						this.updateQueue(error);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
 				}
 				
 			}else{
-				// shouldn't get here
-				throw new ErrorTypeException("this type doesn't exist.");
+				
+				System.err.println("Unknown message type: " + log);
+				
+				ErrorMessage errorQue = new ErrorMessage("Unknown input message. please try again.");
+				try {
+					this.updateQueue(errorQue);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
 			}
 		
 			return null;
@@ -173,10 +209,10 @@ public class ChatHandler implements Runnable ,ServerMessageVisitor<Void>{
 
 		/**
 		 * Visitor method of Conversation operations
-		 * @throws ErrorTypeException 
 		 */
 		@Override
-		public Void visit(ConvOps s) throws ErrorTypeException {
+		public Void visit(ConvOps s) {
+			
 			String convName = s.getConv();
 			ToServer type = s.getType();
 			String username = s.getUser();
@@ -186,13 +222,31 @@ public class ChatHandler implements Runnable ,ServerMessageVisitor<Void>{
 				 // check if the conversation already exists
 			
 				synchronized (this) {
+					
 					if(server.getConvs().containsKey(convName)){ 
 						// add user to this conversation 
 						Conversation conv = server.getConvs().get(convName);
-						// add conversation to this chat handler 
-						convs.put(convName, conv);
-						conv.addClient(username,this);
-						System.err.println(username+" joined room "+ convName);
+						
+						/*
+						 * check if the user is in the conversation already
+						 */
+						
+						if(!conv.getUsers().containsKey(username)){
+							
+							// add conversation to this chat handler 
+							
+							conv.addClient(username,this);
+							System.err.println(username+" joined room "+ convName);
+						}else{
+							try {
+								ErrorMessage e = new ErrorMessage("you are already in this room");
+								this.updateQueue(e);
+							} catch (Exception e) {
+								e.printStackTrace();
+							}
+						}
+						
+						
 					}else{
 						// if it doesn't exists, just create one and join in the conversation 
 						CreateConv(convName);
@@ -204,30 +258,44 @@ public class ChatHandler implements Runnable ,ServerMessageVisitor<Void>{
 						
 						convs.put(convName, conv);
 
-						conv.addClient(username, this );
+						conv.addClient(username, this);
+						
+						System.err.println(username+" joined room "+ convName);
+						
 					}
 					// should not get here	
 				}
 			}else if (type == ToServer.LEAVE) {
 				synchronized (this) {
-					try {
+					
 						if(convs.containsKey(convName)){
 							
 							convs.get(convName).removeClient(username, this);
 							
 							System.err.println(username+" just leave the conversation "+convName);
+							try {
+								this.updateQueue(new Hint("you just left "+convName));
+							} catch (Exception e) {
+								e.printStackTrace();
+							}
+						}else{
+							ErrorMessage errorMessage = new ErrorMessage(convName+" does not exist");
+							try {
+								this.updateQueue(errorMessage);
+							} catch (Exception e) {
+								e.printStackTrace();
+							}
 						}
-					} catch (Exception e) {
-						
-					}
-					
 				}
-					
-				
 			}else{
-				// should not get here
-				throw new ErrorTypeException("this type doesn't exist.");
+				System.err.println("Unknown message type: " + type);
 				
+				ErrorMessage errorQue = new ErrorMessage("Unknown input message. please try again.");
+				try {
+					this.updateQueue(errorQue);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
 			}
 			return null;
 		}
@@ -260,11 +328,14 @@ public class ChatHandler implements Runnable ,ServerMessageVisitor<Void>{
 			
 			synchronized (this) {
 				if(server.getUsers().containsKey(username)){
-					System.err.println("This name already been used");
+					out.println(new Hint("This name already been used").toJSONString());
+					out.flush();
 				}else{
-
 					UserInfo newUser = new UserInfo(this);
 					server.getUsers().put(username, newUser);
+					
+					out.println(new Hint("Welcome "+username+" you are login now").toJSONString());
+					out.flush();
 				}
 			}
 		}
@@ -275,8 +346,16 @@ public class ChatHandler implements Runnable ,ServerMessageVisitor<Void>{
 		 */
 		private void RemoveUser(String username){
 			synchronized (this) {
+				
 				if(server.getUsers().containsKey(username)){
+					
 					server.getUsers().remove(username);
+					Hint goodbye = new Hint(username+", see you next time.");
+					try {
+						this.updateQueue(goodbye);
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
 				}
 			}
 		}
@@ -340,12 +419,12 @@ public class ChatHandler implements Runnable ,ServerMessageVisitor<Void>{
 		}
 		
 		/**
-		 * Update a queue onto this ChatHandler's blockingQueue
-		 * @param queue
+		 * Update a queue onto this ChatHandler's output blockingQueue
+		 * @param String, output queue
 		 * @throws InterruptedException
 		 */
 		
-		public void updateQueue(Message queue) throws InterruptedException {
+		public void updateQueue(ToClientMessage queue) throws InterruptedException {
 			outputqueue.put(queue);
 		}
 

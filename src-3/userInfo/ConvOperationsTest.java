@@ -1,4 +1,4 @@
-package server;
+package userInfo;
 
 import static org.junit.Assert.*;
 
@@ -17,9 +17,9 @@ import com.google.gson.JsonSyntaxException;
 import message.ConvOps;
 import message.ErrorTypeException;
 import message.SignInAndOut;
-import userInfo.ChatHandler;
+import server.ChatServer;
 
-public class ConversationOperationTest {
+public class ConvOperationsTest {
 		private static ChatServer server;
 		private static Socket one;
 		private static ChatHandler onehandler;
@@ -74,97 +74,14 @@ public class ConversationOperationTest {
 			}
 		}
 		
-		/*
-		 * Test validation of the username
-		 */
-		@Test
-		public void testNameValidation() throws UnknownHostException, IOException, JsonSyntaxException, ErrorTypeException{
-			
-			String username1 = "hello1234";
-			Socket client = new Socket("localhost", 10000);
-			ChatHandler handler = new ChatHandler(client, server);
-			assertTrue(handler.checkUserName(username1));
-			/*
-			 * User name exceeds upper limit
-			 */
-			String username2 = "12hello1234123123sdfsa";
-			assertFalse(handler.checkUserName(username2));
-			/*
-			 * name that is less than 5 character
-			 */
-			String username3 = "hi";
-			assertFalse(handler.checkUserName(username3));
-			
-		}
 		
-		/**
-		 * test addUser function 
-		 * @throws IOException 
-		 * @throws UnknownHostException 
-		 * @throws ErrorTypeException 
-		 */
-		@Test
-		public void addConnectionTest() throws UnknownHostException, IOException, ErrorTypeException{
-			
-			String username1 = "user1";
-			SignInAndOut message = new SignInAndOut(username1, true);
-			
-			assertEquals(0,server.getUserNumber());
-			/*
-			 * Supposed that client sends a sign-in message
-			 */
-			onehandler.visit(message);
-			
-			assertEquals(1, server.getUserNumber());
-		}
-		
-		/**
-		 * test add another client that with same id that already exists
-		 * @throws IOException 
-		 * @throws UnknownHostException 
-		 * @throws ErrorTypeException 
-		 */
-		@Test
-		public void ConflictClientTest() throws UnknownHostException, IOException, ErrorTypeException{
-			String username1 = "hello12345";
-			SignInAndOut message = new SignInAndOut(username1, true);
-			
-			/*
-			 *  user1 is in the server 
-			 */
-			assertEquals(1,server.getUserNumber());
-			/*
-			 * Supposed that client sends a sign-in message
-			 */
-			handler2.visit(message);
-			
-			assertEquals(2, server.getUserNumber());
-			/*
-			 *  hello123456 is already in the user list of server
-			 */
-			assertEquals(2, server.getUserNumber());
-			String conflict = "hello12345";
-			
-			SignInAndOut m = new SignInAndOut(conflict, true);
-			
-			/*
-			 *  hello123456 is already in the user list of server
-			 */
-			assertEquals(2,server.getUserNumber());
-			/*
-			 * Supposed that conflictclient sends a sign-in message
-			 */
-			handler3.visit(m);
-			
-			assertEquals(2, server.getUserNumber());
-		}
 		
 		/**
 		 * Test creating a conversation, joining, and leave the coversations
 		 * @throws ErrorTypeException 
 		 */
 		@Test
-		public void CreateAndJoinConv() throws ErrorTypeException{
+		public void CreateConv() throws ErrorTypeException{
 			assertEquals(0, server.getConvsNumber());
 			ConvOps create = new ConvOps("hello12345", true, "happiness");
 			onehandler.visit(create);
@@ -185,10 +102,8 @@ public class ConversationOperationTest {
 			
 			assertEquals(3, server.getConvs().get(convname).getUserNum());
 			
-
 			pause();
 			pause();
-			
 			
 			ConvOps user3leave = new ConvOps("user3", false, convname);
 			ConvOps user2leave = new ConvOps("user2", false, convname);

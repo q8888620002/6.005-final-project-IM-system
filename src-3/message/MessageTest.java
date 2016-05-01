@@ -2,11 +2,14 @@ package message;
 
 import static org.junit.Assert.*;
 
+import java.util.ArrayList;
+
 import org.junit.Test;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
+import message.ToClientMessage.ToClient;
 import message.ToServerMessage.ToServer;
 
 public class MessageTest {
@@ -99,5 +102,43 @@ public class MessageTest {
 		assertEquals("Eric Lu", chat.getUser());
 		assertEquals(message, chat.toJSONString());
 	}
+	
+	/*
+	 * Error message testing 
+	 */
+	@Test
+	public void ErrorTest(){
+		String error = "an error has occurred";
+		ErrorMessage errorMessage = new ErrorMessage(error);
+		
+		assertEquals(ToClient.ERROR, errorMessage.getType());
+		assertEquals("{\"error\":\"an error has occurred\",\"type\":\"ERROR\"}"
+				, errorMessage.toJSONString());
+	}
+	
+	
+	/*
+	 * Test initialized online user list to client 
+	 */
+	@Test
+	public void UserList(){
+		ArrayList<String> names = new ArrayList<String>();
+		names.add("Eric");
+		names.add("Julie");
+		Userlsit list = new Userlsit(names);
+		
+		assertEquals(ToClient.USERLIST, list.getType());
+		assertEquals("{\"users\":[\"Eric\",\"Julie\"],\"type\":\"USERLIST\"}", list.toJSONString());
+	}
+	
+	/*
+	 * Return the chat message to client
+	 */
+	
+	@Test
+	public void ChatMessageToClient(){
+		
+	}
+	
 	
 }

@@ -40,6 +40,7 @@ public class MessageFactory implements JsonDeserializer<Message>{
 					jsonObject.get("content").getAsString(),
 					jsonObject.get("from").getAsString());
 		case"JOIN":
+			System.err.println(jsonObject.get("conversation").getAsString());
 			return new ConvOps(
 					jsonObject.get("username").getAsString(),
 					true,

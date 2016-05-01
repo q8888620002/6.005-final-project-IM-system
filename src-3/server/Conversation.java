@@ -35,6 +35,7 @@ public class Conversation extends Thread{
 	/**
 	 * Run method for the conversation thread, the conversation will block if blocking queue is empty or full
 	 */
+	
 	@Override
 	public void run(){
 		while(true){

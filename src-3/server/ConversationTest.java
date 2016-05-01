@@ -89,10 +89,12 @@ public class ConversationTest {
 			String conversation = "happiness";
 			ConvOps join = new ConvOps(username2, true, conversation);
 			
+			String conversations = "happinesss";
+			ConvOps join2 = new ConvOps(username2, true, conversations);
 			// user2 join a existing conversation "happiness"
-			handler2.visit(join);
+			handler2.visit(join2);
 			
-			assertEquals(2, server.getConvs().get(conversation).getUserNum());
+			assertEquals(2, server.getConvs().size());
 		}
 			
 }

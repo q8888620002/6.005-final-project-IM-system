@@ -3,7 +3,7 @@ package message;
 /*
  * An interface that implemented by all server to client message and contains a method
  */
-public interface ToClientMessage {
+public interface ToClientMessage extends Message{
 	
 	/**
 	 * @return the Message type of to client message ex. USERLIST , CHAT.
@@ -15,6 +15,8 @@ public interface ToClientMessage {
 	 */
 	public enum ToClient{
 		USERLIST,
-		CHAT
+		CHAT,
+		ERROR,
+		HINT
 	}
 }
