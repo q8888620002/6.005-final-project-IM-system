@@ -4,6 +4,9 @@ import java.util.HashMap;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import message.ChatToClient;
+import message.ChatToServer;
+import message.Hint;
 import message.ToServerMessage;
 import userInfo.ChatHandler;
 
@@ -19,7 +22,7 @@ import userInfo.ChatHandler;
 
 public class Conversation extends Thread{
 	private final HashMap<String, ChatHandler> users = new HashMap<String, ChatHandler>();	
-	private final BlockingQueue<ToServerMessage> queue = new LinkedBlockingQueue<ToServerMessage>();
+	private final BlockingQueue<ChatToServer> queue = new LinkedBlockingQueue<ChatToServer>();
 	private final String name;
 	
 	/**
@@ -42,7 +45,7 @@ public class Conversation extends Thread{
 			try {
 				// take the queue from other thread and deal with it
 				
-				ToServerMessage message = queue.take();
+				ChatToServer message = queue.take();
 				try {
 					
 					HandleQueue(message);
@@ -57,21 +60,37 @@ public class Conversation extends Thread{
 	}
 	
 	/**
-	 * Handling the queue, turning it into action  such as addClient or removeClient
+	 * Handling the queue, turning it into ChatToClient message
 	 * @param message, ADT of the queue
 	 */
-	private void HandleQueue(ToServerMessage message){
-		
+	private void HandleQueue(ChatToServer message){
+		ChatToClient chat = new ChatToClient(message.getUser(), message.getContent());
+		for(ChatHandler user: users.values()){
+			try {
+				user.updateQueue(chat);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
 	}
 	
 	/**
-	 * Add a new client to listen to this conversation 
+	 * Add a new client to listen to this conversation and notify users who is in the conversation 
 	 * This method is synchronized 
 	 * @param user , the string representation of user
 	 * @param ChatHandler of the client 
 	 */
 	public synchronized void addClient(String username, ChatHandler handler){
-			users.put(username, handler);
+		Hint notification = new Hint(username+" has joined the conversation.");
+		for (ChatHandler user : users.values()){
+			try {
+				user.updateQueue(notification);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}	
+		users.put(username, handler);
+			
 	}
 	
 	/**
@@ -83,14 +102,31 @@ public class Conversation extends Thread{
 	 */
 	public synchronized void removeClient(String username, ChatHandler handler){
 		users.remove(username, handler);
+		Hint notification = new Hint(username+" has left the conversation.");
+		for (ChatHandler user : users.values()){
+			try {
+				user.updateQueue(notification);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}	
 	}
 	
 	/**
-	 * Called by input handler who update a queue onto BlockingQueue of this conversation 
+	 * Called by Chat handler who update a queue onto BlockingQueue of the conversation 
 	 * @param queue, a Message that contains action to be performed 
+	 * @throws InterruptedException 
 	 */
-	public void updateMessage(ToServerMessage queue){
-		
+	public void updateMessage(ChatToServer message) throws InterruptedException{
+		queue.put(message);
+	}
+	
+	/**
+	 *  Debugger method of the queue
+	 * @return the chat message blocking queue
+	 */
+	public BlockingQueue<ChatToServer> getqueue(){
+		return queue;
 	}
 	
 	/**

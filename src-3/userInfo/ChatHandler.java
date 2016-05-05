@@ -53,6 +53,7 @@ public class ChatHandler implements Runnable ,ServerMessageVisitor<Void>{
 		private final BlockingQueue<ToClientMessage> outputqueue = new LinkedBlockingQueue<ToClientMessage>();
 		private final PrintWriter out;
 		private final Thread outputThread;
+		private boolean online = true;
 		
 		/**
 		 * Create an InputHandler 
@@ -71,7 +72,7 @@ public class ChatHandler implements Runnable ,ServerMessageVisitor<Void>{
 			outputThread = new Thread(){
 				@Override
 				public void run() {
-					while(true){
+					while(online){
 						try {
 							ToClientMessage message = outputqueue.take();
 						
@@ -118,7 +119,7 @@ public class ChatHandler implements Runnable ,ServerMessageVisitor<Void>{
 			 */
 			outputThread.start();
 			
-			while (true) {
+			while (true & online) {
 				try {
 						String input = in.readLine(); 	
 						while(input!=null){
@@ -180,8 +181,26 @@ public class ChatHandler implements Runnable ,ServerMessageVisitor<Void>{
 			}else if(log == ToServer.SIGNOUT){
 				
 				if(server.getUsers().containsKey(username)){
-					
 					RemoveUser(username);
+					removeHandler(username);
+							try {
+								this.updateQueue(new Hint("you are offline."));
+									/*
+									 * shut down the thread 
+									 */
+								online = false;
+								outputThread.interrupt();
+								try {
+									/*
+									 * closing the socket
+									 */
+									clientSocket.close();
+								} catch (IOException e) {
+									e.printStackTrace();
+								}
+							} catch (Exception e) {
+								e.printStackTrace();
+							}
 				}else{
 					
 					ErrorMessage error = new ErrorMessage("You're currently offline. You cannot sign out.");
@@ -267,7 +286,7 @@ public class ChatHandler implements Runnable ,ServerMessageVisitor<Void>{
 				}
 			}else if (type == ToServer.LEAVE) {
 				synchronized (this) {
-					
+						
 						if(convs.containsKey(convName)){
 							
 							convs.get(convName).removeClient(username, this);
@@ -275,6 +294,7 @@ public class ChatHandler implements Runnable ,ServerMessageVisitor<Void>{
 							System.err.println(username+" just leave the conversation "+convName);
 							try {
 								this.updateQueue(new Hint("you just left "+convName));
+								
 							} catch (Exception e) {
 								e.printStackTrace();
 							}
@@ -300,9 +320,25 @@ public class ChatHandler implements Runnable ,ServerMessageVisitor<Void>{
 			return null;
 		}
 
+		/**
+		 * Client sends message to chatserver 
+		 */
+		
 		@Override
 		public Void visit(ChatToServer s) {
-			// TODO Auto-generated method stub
+			String ConvName = s.getConv();
+			
+			try {
+				convs.get(ConvName).updateMessage(s);
+			} catch (InterruptedException e) {
+				ErrorMessage error = new ErrorMessage("Message sneding failed.");
+				try {
+					this.updateQueue(error);
+				} catch (InterruptedException e1) {
+					e1.printStackTrace();
+				}
+				e.printStackTrace();
+			}
 			return null;
 		}
 		
@@ -381,32 +417,15 @@ public class ChatHandler implements Runnable ,ServerMessageVisitor<Void>{
 			}
 		}
 		
-		/**
-		 * Joining a specific conversation in the AllConvs hash map of server
-		 * @param integer id of the conversation 
-		 * @return a message queue that notifies all users that a user joined.
-		 */
-		private void joinConv(String roomname){
-			
-		}
 		
 		/**
-		 * Leave a conversation that the user current in  
-		 * @param id of the conversation that user is going to leave.
-		 * @return a Message queue that notifies all users that a user left.
+		 * Removing chathandler in all conversation that current user in 
+		 * @param string of username
 		 */
-		private Message LeaveConv(String roomname){
-			return null;
-		}
-		
-		/**
-		 * Sending Message to all users in the id specified conversation.
-		 * @param id, the identifier for the conversation 
-		 * @param String content to be sent to all the other users who currently in the conversation.
-		 * @return a Message that contains string messages that to be sent to other users
-		 */
-		private Message SendMessage(String roomname, String content){
-			return null;
+		private synchronized void  removeHandler(String username){
+			for(Conversation conv: convs.values()){
+				conv.removeClient(username, this);
+			}
 		}
 		
 		/**

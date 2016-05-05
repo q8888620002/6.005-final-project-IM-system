@@ -37,7 +37,7 @@ public class ChatServerTest {
 		{
 			fail();
 		}
-		
+
 		/*
 		 * Start the server 
 		 */

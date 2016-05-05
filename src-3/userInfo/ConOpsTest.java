@@ -18,9 +18,11 @@ import org.junit.Test;
 
 import com.google.gson.JsonSyntaxException;
 
+import message.ChatToServer;
 import message.ConvOps;
 import message.ErrorTypeException;
 import message.Hint;
+import message.SignInAndOut;
 import server.ChatServer;
 
 public class ConOpsTest {
@@ -245,7 +247,13 @@ public class ConOpsTest {
 		pause();
 		assertTrue(chatServer.getConvs().get(conv).getUsers().containsKey("Harvey"));
 		
+		/*
+		 * notify EricLu that Harvey joined the conversation 
+		 */
+		assertTrue(clientIn.ready());
+		assertEquals("{\"content\":\"Harvey has joined the conversation.\",\"type\":\"HINT\"}", clientIn.readLine());
 		assertTrue(loginThread2.isAlive());
+		
 		assertTrue(chatServer.getUsers().containsKey("Harvey"));
 		assertFalse(serverSide2.isClosed());
 		Hint ckeck = new Hint("message before closing");
@@ -283,7 +291,7 @@ public class ConOpsTest {
 	 * Test if the ChatHandler handle the leave request properly 
 	 */
 	@Test
-	public void LeaveConversation() throws IOException{
+	public void LeaveConversation() throws IOException, JsonSyntaxException, ErrorTypeException{
 		assertEquals(0, chatServer.getConvsNumber());
 		String conv = "weather of day";
 		ConvOps convOps = new ConvOps("EricLu", true, conv);
@@ -293,6 +301,19 @@ public class ConOpsTest {
 		assertEquals(1, chatServer.getConvsNumber());
 		assertTrue(chatServer.getConvs().containsKey(conv));
 		assertTrue(chatServer.getConvs().get(conv).getUsers().containsKey("EricLu"));
+		
+		/*
+		 * another user sign in 
+		 */
+		SignInAnOtherUser();
+		ConvOps joinConv = new ConvOps("Harvey", true, conv);
+		clientOut2.println(joinConv.toJSONString());
+		clientOut2.flush();
+		pause();
+		assertTrue(chatServer.getConvs().get(conv).getUsers().containsKey("Harvey"));
+		
+		assertTrue(clientIn.ready());
+		assertEquals("{\"content\":\"Harvey has joined the conversation.\",\"type\":\"HINT\"}", clientIn.readLine());
 		
 		ConvOps leave = new ConvOps("EricLu", false, conv);
 		clientOut.println(leave.toJSONString());
@@ -304,6 +325,12 @@ public class ConOpsTest {
 		
 		assertTrue(clientIn.ready());
 		assertEquals("{\"content\":\"you just left weather of day\",\"type\":\"HINT\"}", clientIn.readLine());
+		
+		/*
+		 * leave message from conversation 
+		 */
+		assertTrue(clientIn2.ready());
+		assertEquals("{\"content\":\"EricLu has left the conversation.\",\"type\":\"HINT\"}",clientIn2.readLine());
 	}
 	
 	/*
@@ -323,5 +350,73 @@ public class ConOpsTest {
 		
 		assertTrue(clientIn.ready());
 		assertEquals("{\"error\":\"weather of day does not exist\",\"type\":\"ERROR\"}", clientIn.readLine());
+	}
+	
+	/*
+	 * Send a message to users in the coversations
+	 */
+	@Test
+	public void SendMessage() throws IOException, JsonSyntaxException, ErrorTypeException, InterruptedException{
+		assertEquals(0, chatServer.getConvsNumber());
+		String conv = "league of lengends";
+		ConvOps convOps = new ConvOps("EricLu", true, conv);
+		clientOut.println(convOps.toJSONString());
+		clientOut.flush();
+		pause();
+		assertEquals(1, chatServer.getConvsNumber());
+		assertTrue(chatServer.getConvs().containsKey(conv));
+		assertTrue(chatServer.getConvs().get(conv).getUsers().containsKey("EricLu"));
+		/*
+		 * Harvey signed in 
+		 */
+		SignInAnOtherUser();
+		ConvOps joinConv = new ConvOps("Harvey", true, conv);
+		clientOut2.println(joinConv.toJSONString());
+		clientOut2.flush();
+		pause();
+		assertTrue(chatServer.getConvs().get(conv).getUsers().containsKey("Harvey"));
+		
+		/*
+		 * notify EricLu that Harvey joined the conversation 
+		 */
+		assertTrue(clientIn.ready());
+		assertEquals("{\"content\":\"Harvey has joined the conversation.\",\"type\":\"HINT\"}", clientIn.readLine());
+
+		// sending out the message 
+		ChatToServer message = new ChatToServer(conv, "how are you", "EricLu");
+		clientOut.println(message.toJSONString());
+		clientOut.flush();
+		pause();
+		assertTrue(clientIn.ready());
+		assertEquals("{\"From\":\"EricLu\",\"content\":\"how are you\",\"type\":\"CHAT\"}", clientIn.readLine());
+		assertTrue(clientIn2.ready());
+		assertEquals("{\"From\":\"EricLu\",\"content\":\"how are you\",\"type\":\"CHAT\"}", clientIn2.readLine());
+	}
+	
+	/*
+	 * SignOut Test/ test to see if chat hander can handle the sign out request properly  
+	 */
+	@Test
+	public void SignOutTest() throws JsonSyntaxException, UnknownHostException, IOException, ErrorTypeException, InterruptedException{
+		SignInAnOtherUser();
+		String conv = "test";
+		ConvOps joinConv = new ConvOps("Harvey", true, conv);
+		clientOut2.println(joinConv.toJSONString());
+		clientOut2.flush();
+		pause();
+		assertTrue(chatServer.getConvs().get(conv).getUsers().containsKey("Harvey"));
+		
+		SignInAndOut logOut = new SignInAndOut("Harvey", false);
+		clientOut2.println(logOut.toJSONString());
+		clientOut2.flush();
+		pause();
+		
+		// check if the user has been removed from conversation 
+		assertFalse(chatServer.getConvs().get(conv).getUsers().containsKey("Harvey"));
+		// check if the user has been removed from server 
+		assertFalse(chatServer.getUsers().containsKey("Harvey"));
+		assertFalse(loginThread2.isAlive());
+		assertTrue(serverSide2.isClosed());
+		
 	}
 }
