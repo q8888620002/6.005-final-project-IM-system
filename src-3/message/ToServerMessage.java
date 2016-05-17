@@ -25,7 +25,7 @@ public interface ToServerMessage extends Message{
 	     *  Enum type of ToServer Message
 	     */
 		public enum ToServer{
-			CHAT,
+			CHATTOSERVER,
 			JOIN,
 			LEAVE,
 			SIGNIN,

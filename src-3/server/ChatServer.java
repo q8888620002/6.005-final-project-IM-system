@@ -10,6 +10,7 @@ import java.util.HashMap;
 import com.sun.javafx.collections.MappingChange.Map;
 import com.sun.org.apache.xml.internal.resolver.helpers.PublicId;
 import com.sun.swing.internal.plaf.synth.resources.synth;
+import com.sun.xml.internal.bind.v2.schemagen.xmlschema.List;
 
 import userInfo.ChatHandler;
 import userInfo.UserInfo;
@@ -100,6 +101,20 @@ public class ChatServer {
     public synchronized HashMap<String, UserInfo> getUsers(){
     	return users;
     }
+    
+    /**
+     * getter of the user name list 
+     * @return a Arraylist of string of user name 
+     */
+    public synchronized ArrayList<String> getUserList(){
+    	ArrayList<String> names = new ArrayList<String>();
+
+    	for(String name: users.keySet()){
+    		names.add(name);
+    	}
+    	return names;
+    }
+    
     
     /**
      * get the total number of online users

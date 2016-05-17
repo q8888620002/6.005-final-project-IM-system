@@ -15,8 +15,15 @@ public interface ToClientMessage extends Message{
 	 */
 	public enum ToClient{
 		USERLIST,
-		CHAT,
+		CHATTOCLIENT,
 		ERROR,
 		HINT
 	}
+	
+	  /**
+     * accept method for visitor to visit 
+     * @param <T>
+     * @throws ErrorTypeException 
+     */
+    public <T> void accept(ClientMessageVisitor<T> v) throws ErrorTypeException;
 }

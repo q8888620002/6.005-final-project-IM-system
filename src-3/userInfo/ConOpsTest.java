@@ -189,6 +189,11 @@ public class ConOpsTest {
 		pause();
 		assertTrue(chatServer.getConvs().containsKey(conv2));
 		assertEquals(1, chatServer.getConvs().get(conv2).getUserNum());
+		assertTrue(clientIn.ready());
+		assertEquals("{\"content\":\"you have created testRoom1\",\"type\":\"HINT\"}", clientIn.readLine());
+		assertTrue(clientIn.ready());
+		assertEquals("{\"content\":\"you have created testRoom2\",\"type\":\"HINT\"}", clientIn.readLine());
+
 		
 	}
 	
@@ -212,6 +217,9 @@ public class ConOpsTest {
 		clientOut.println(convOps.toJSONString());
 		clientOut.flush();
 		pause();
+		assertTrue(clientIn.ready());
+		assertEquals("{\"content\":\"you have created why man love to cheat?\",\"type\":\"HINT\"}", clientIn.readLine());
+
 		assertTrue(clientIn.ready());
 		assertEquals("{\"error\":\"you are already in this room\",\"type\":\"ERROR\"}", clientIn.readLine());
 		assertEquals(1, chatServer.getConvsNumber());
@@ -251,6 +259,9 @@ public class ConOpsTest {
 		 * notify EricLu that Harvey joined the conversation 
 		 */
 		assertTrue(clientIn.ready());
+		assertEquals("{\"content\":\"you have created league of lengends\",\"type\":\"HINT\"}", clientIn.readLine());
+
+		assertTrue(clientIn.ready());
 		assertEquals("{\"content\":\"Harvey has joined the conversation.\",\"type\":\"HINT\"}", clientIn.readLine());
 		assertTrue(loginThread2.isAlive());
 		
@@ -259,6 +270,9 @@ public class ConOpsTest {
 		Hint ckeck = new Hint("message before closing");
 		handler2.updateQueue(ckeck);
 		pause();
+		assertTrue(clientIn2.ready());
+		assertEquals("{\"content\":\"you have joined league of lengends\",\"type\":\"HINT\"}", clientIn2.readLine());
+
 		assertTrue(clientIn2.ready());
 		assertEquals("{\"content\":\"message before closing\",\"type\":\"HINT\"}", clientIn2.readLine());
 		
@@ -283,6 +297,9 @@ public class ConOpsTest {
 		clientOut.println(convOps.toJSONString());
 		clientOut.flush();
 		pause();
+		assertTrue(clientIn.ready());
+		assertEquals("{\"content\":\"you have created league\",\"type\":\"HINT\"}", clientIn.readLine());
+
 		assertTrue(clientIn.ready());
 		assertEquals("{\"error\":\"you are already in this room\",\"type\":\"ERROR\"}", clientIn.readLine());
 	}
@@ -311,7 +328,9 @@ public class ConOpsTest {
 		clientOut2.flush();
 		pause();
 		assertTrue(chatServer.getConvs().get(conv).getUsers().containsKey("Harvey"));
-		
+		assertTrue(clientIn.ready());
+		assertEquals("{\"content\":\"you have created weather of day\",\"type\":\"HINT\"}", clientIn.readLine());
+
 		assertTrue(clientIn.ready());
 		assertEquals("{\"content\":\"Harvey has joined the conversation.\",\"type\":\"HINT\"}", clientIn.readLine());
 		
@@ -329,6 +348,9 @@ public class ConOpsTest {
 		/*
 		 * leave message from conversation 
 		 */
+		assertTrue(clientIn2.ready());
+		assertEquals("{\"content\":\"you have joined weather of day\",\"type\":\"HINT\"}", clientIn2.readLine());
+		
 		assertTrue(clientIn2.ready());
 		assertEquals("{\"content\":\"EricLu has left the conversation.\",\"type\":\"HINT\"}",clientIn2.readLine());
 	}
@@ -363,6 +385,9 @@ public class ConOpsTest {
 		clientOut.println(convOps.toJSONString());
 		clientOut.flush();
 		pause();
+		assertTrue(clientIn.ready());
+		assertEquals("{\"content\":\"you have created league of lengends\",\"type\":\"HINT\"}", clientIn.readLine());
+
 		assertEquals(1, chatServer.getConvsNumber());
 		assertTrue(chatServer.getConvs().containsKey(conv));
 		assertTrue(chatServer.getConvs().get(conv).getUsers().containsKey("EricLu"));
@@ -389,6 +414,8 @@ public class ConOpsTest {
 		pause();
 		assertTrue(clientIn.ready());
 		assertEquals("{\"From\":\"EricLu\",\"content\":\"how are you\",\"type\":\"CHAT\"}", clientIn.readLine());
+		assertTrue(clientIn2.ready());
+		assertEquals("{\"content\":\"you have joined league of lengends\",\"type\":\"HINT\"}", clientIn2.readLine());
 		assertTrue(clientIn2.ready());
 		assertEquals("{\"From\":\"EricLu\",\"content\":\"how are you\",\"type\":\"CHAT\"}", clientIn2.readLine());
 	}

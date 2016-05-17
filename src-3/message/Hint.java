@@ -34,4 +34,9 @@ public class Hint implements ToClientMessage{
 		return type;
 	}
 
+	@Override
+	public <T> void accept(ClientMessageVisitor<T> v) throws ErrorTypeException {
+		v.visit(this);
+	}
+
 }

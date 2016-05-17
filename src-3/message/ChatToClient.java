@@ -9,8 +9,9 @@ import com.google.gson.Gson;
  *
  */
 public class ChatToClient implements ToClientMessage{
-	private final String From;
+	private final String from;
 	private final String content;
+	private final String conversation;
 	private final ToClient type;
 	
 	/**
@@ -18,10 +19,11 @@ public class ChatToClient implements ToClientMessage{
 	 * @param from
 	 * @param contnet
 	 */
-	public ChatToClient(String from, String content) {
-		this.From = from;
+	public ChatToClient(String conversation, String from, String content) {
+		this.from = from;
 		this.content = content;
-		this.type = ToClient.CHAT;
+		this.conversation = conversation;
+		this.type = ToClient.CHATTOCLIENT;
 	}
 	
 	/**
@@ -38,6 +40,11 @@ public class ChatToClient implements ToClientMessage{
 	@Override
 	public ToClient getType() {
 		return type;
+	}
+
+	@Override
+	public <T> void accept(ClientMessageVisitor<T> v) throws ErrorTypeException {
+		v.visit(this);
 	}
 
 }

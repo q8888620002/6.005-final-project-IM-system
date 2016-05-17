@@ -28,6 +28,7 @@ import message.SignInAndOut;
 import message.ToClientMessage;
 import message.ToServerMessage;
 import message.ToServerMessage.ToServer;
+import message.Userlsit;
 import server.ChatServer;
 import server.Conversation;
 
@@ -123,7 +124,7 @@ public class ChatHandler implements Runnable ,ServerMessageVisitor<Void>{
 				try {
 						String input = in.readLine(); 	
 						while(input!=null){
-							System.err.println(input);
+							
 							parseMessage(input);
 							input = in.readLine();
 						}
@@ -255,6 +256,12 @@ public class ChatHandler implements Runnable ,ServerMessageVisitor<Void>{
 							// add conversation to this chat handler 
 							
 							conv.addClient(username,this);
+							try {
+								Hint e = new Hint("you have joined "+convName);
+								this.updateQueue(e);
+							} catch (Exception e) {
+								e.printStackTrace();
+							}
 							System.err.println(username+" joined room "+ convName);
 						}else{
 							try {
@@ -276,9 +283,14 @@ public class ChatHandler implements Runnable ,ServerMessageVisitor<Void>{
 						Conversation conv = server.getConvs().get(convName);
 						
 						convs.put(convName, conv);
-
+						try {
+							Hint e = new Hint("you have created "+convName);
+							this.updateQueue(e);
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
 						conv.addClient(username, this);
-						
+					
 						System.err.println(username+" joined room "+ convName);
 						
 					}
@@ -372,6 +384,9 @@ public class ChatHandler implements Runnable ,ServerMessageVisitor<Void>{
 					
 					out.println(new Hint("Welcome "+username+" you are login now").toJSONString());
 					out.flush();
+					
+					out.println(new Userlsit(server.getUserList()).toJSONString());
+					out.flush();
 				}
 			}
 		}
@@ -387,11 +402,8 @@ public class ChatHandler implements Runnable ,ServerMessageVisitor<Void>{
 					
 					server.getUsers().remove(username);
 					Hint goodbye = new Hint(username+", see you next time.");
-					try {
-						this.updateQueue(goodbye);
-					} catch (Exception e) {
-						e.printStackTrace();
-					}
+					out.println(goodbye.toJSONString());
+					out.flush();
 				}
 			}
 		}

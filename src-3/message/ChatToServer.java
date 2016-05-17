@@ -26,7 +26,7 @@ public class ChatToServer implements ToServerMessage{
 		this.content = content; 
 		this.conversation = conversation;
 		this.from = From;
-		this.type = ToServer.CHAT;
+		this.type = ToServer.CHATTOSERVER;
 	}
 	
 	

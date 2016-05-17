@@ -34,7 +34,7 @@ public class MessageFactory implements JsonDeserializer<Message>{
 					jsonObject.get("username").getAsString(),
 					false
 					);
-		case "CHAT":
+		case "CHATTOSERVER":
 			return new ChatToServer(
 					jsonObject.get("conversation").getAsString(), 
 					jsonObject.get("content").getAsString(),
@@ -52,6 +52,16 @@ public class MessageFactory implements JsonDeserializer<Message>{
 					false,
 					jsonObject.get("conversation").getAsString()
 					);
+	// to client message		
+		case "CHATTOCLIENT":
+			return new ChatToClient(
+					jsonObject.get("conversation").getAsString(), 
+					jsonObject.get("from").getAsString(),
+					jsonObject.get("content").getAsString());
+		case"HINT":
+			return new Hint(jsonObject.get("content").getAsString());
+		case"ERROR":
+			return new Hint(jsonObject.get("content").getAsString());
 		default:
 			/**
 			 * return an error message if user sending an unformatted string object 

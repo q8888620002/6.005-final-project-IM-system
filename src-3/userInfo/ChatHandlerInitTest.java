@@ -68,7 +68,7 @@ public class ChatHandlerInitTest {
 		 */
 		private void pause() {
 			try {
-				Thread.sleep(500);
+				Thread.sleep(300);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
@@ -90,13 +90,16 @@ public class ChatHandlerInitTest {
 		private void SigninCheck() throws IOException{
 
 			assertTrue(clientIn.ready());
-			assertEquals(clientIn.readLine(), "{\"content\":\"Please enter your name\",\"type\":\"HINT\"}");
+			assertEquals("{\"content\":\"Please enter your name\",\"type\":\"HINT\"}",clientIn.readLine());
 
 			assertTrue(clientIn.ready());
-			assertEquals(clientIn.readLine(), "{\"content\":\"Welcome EricLu you are login now\",\"type\":\"HINT\"}");
+			assertEquals("{\"content\":\"Welcome EricLu you are login now\",\"type\":\"HINT\"}",clientIn.readLine());
 
 			assertTrue(clientIn.ready());
-			assertEquals(clientIn.readLine(), "{\"content\":\"Receiving Message from Server..\",\"type\":\"HINT\"}");
+			assertEquals("{\"users\":[\"EricLu\"],\"type\":\"USERLIST\"}",clientIn.readLine());
+			
+			assertTrue(clientIn.ready());
+			assertEquals("{\"content\":\"Receiving Message from Server..\",\"type\":\"HINT\"}",clientIn.readLine());
 			
 		
 		}
@@ -168,6 +171,7 @@ public class ChatHandlerInitTest {
 			clientOut.flush();
 			test.join();
 			
+			
 			assertTrue(clientIn.ready());
 			assertEquals(clientIn.readLine(), "{\"content\":\"Welcome EricChang you are login now\",\"type\":\"HINT\"}");
 			assertTrue(chatServer.getUsers().containsKey("EricChang"));
@@ -195,6 +199,10 @@ public class ChatHandlerInitTest {
 			assertTrue(clientIn.ready());
 			assertEquals(clientIn.readLine(), "{\"content\":\"Welcome EricLu you are login now\",\"type\":\"HINT\"}");
 			
+			assertTrue(clientIn.ready());
+			assertEquals("{\"users\":[\"EricLu\"],\"type\":\"USERLIST\"}",clientIn.readLine());
+			
+			
 			Thread test = new Thread(handler);
 			test.start();
 			pause();
@@ -220,6 +228,8 @@ public class ChatHandlerInitTest {
 			SignInAndOut logOut = new SignInAndOut("EricLu", false);
 			clientOut.println(logOut.toJSONString());
 			pause();
+			assertEquals(0, chatServer.getUserNumber());
+			
 			assertTrue(clientIn.ready());
 			assertEquals(clientIn.readLine(), "{\"content\":\"EricLu, see you next time.\",\"type\":\"HINT\"}");
 		}

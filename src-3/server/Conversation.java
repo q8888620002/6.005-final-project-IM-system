@@ -64,7 +64,7 @@ public class Conversation extends Thread{
 	 * @param message, ADT of the queue
 	 */
 	private void HandleQueue(ChatToServer message){
-		ChatToClient chat = new ChatToClient(message.getUser(), message.getContent());
+		ChatToClient chat = new ChatToClient(message.getConv(),message.getUser(), message.getContent());
 		for(ChatHandler user: users.values()){
 			try {
 				user.updateQueue(chat);

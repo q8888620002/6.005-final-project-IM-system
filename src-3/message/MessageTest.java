@@ -89,7 +89,7 @@ public class MessageTest {
 	@Test
 	public void ChatMessageTest(){
 		String message = "{\"from\":\"Eric Lu\","
-				+ "\"type\":\"CHAT\","
+				+ "\"type\":\"CHATTOSERVER\","
 				+ "\"conversation\":\"piper\","
 				+ "\"content\":\" hello world this is my first chat tak to you\"}";
 		GsonBuilder  gsonBuilder = new GsonBuilder();
@@ -98,7 +98,7 @@ public class MessageTest {
 	
 		ToServerMessage chat = gsonBuilder.create().fromJson(message, Message.class);
 		
-		assertEquals(ToServer.CHAT, chat.getType());
+		assertEquals(ToServer.CHATTOSERVER, chat.getType());
 		assertEquals("Eric Lu", chat.getUser());
 		assertEquals(message, chat.toJSONString());
 	}
@@ -137,7 +137,19 @@ public class MessageTest {
 	
 	@Test
 	public void ChatMessageToClient(){
+		String message = "{\"from\":\"Eric Lu\""
+				+ ",\"content\":\" hello world this is my first chat tak to you\""
+				+ ",\"conversation\":\"piper\""
+				+ ",\"type\":\"CHATTOCLIENT\"}";
+		GsonBuilder  gsonBuilder = new GsonBuilder();
 		
+		gsonBuilder.registerTypeAdapter(Message.class, new MessageFactory());
+	
+		ToClientMessage chat = gsonBuilder.create().fromJson(message, Message.class);
+		
+		assertEquals(ToClient.CHATTOCLIENT, chat.getType());
+	
+		assertEquals(message, chat.toJSONString());
 	}
 	
 	
