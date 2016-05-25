@@ -46,10 +46,11 @@ public class ChatModel implements ClientMessageVisitor<Void>{
 		private Socket client;
 		private BufferedReader in;
 		private PrintWriter out ;
-		private final ArrayList<String> users;
+		private Thread listener;
+		private  ArrayList<String> users;
 		private final HashMap<String, ChatRoom> rooms;
 		
-		private PrintWriter outputTranscript,inputTranscript,fullTranscript;
+		private PrintWriter outputDebugger,inputDebugger,fullDebugger;
 		/**
 		 * It's a constructor of the chatModel which is the mode of the chatBoard	
 		 * @param String of the host name
@@ -58,59 +59,62 @@ public class ChatModel implements ClientMessageVisitor<Void>{
 		 * @throws UnknownHostException 
 		 */
 		
-		public ChatModel(String hostname,Integer portNum) throws UnknownHostException, IOException {
+		public ChatModel(String hostname,Integer portNum) throws IOException {
 			this.hostname = hostname;
 			this.port = portNum;
 			this.users = new ArrayList<String>();
 			this.rooms = new HashMap<String, ChatRoom >();
+			
+			/* 
+			 * Initiating the connecting  procedure
+			 */
+			
+			try {
+				client = new Socket(hostname, port);
+			} catch (UnknownHostException e) {
+				e.printStackTrace();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		
+			
+			/**
+			 * if connecting succeed calling the main board ui and start to run the model
+			 */
 		}
 		
 		/**
-		 * start a socket connection with chat server 
+		 * Start a new thread to listen to input 
 		 */
 		public void start(){
 			try {
-				client = new Socket(hostname, port);
-				in = new BufferedReader(new InputStreamReader(client.getInputStream()));
+				
 				out = new PrintWriter(client.getOutputStream(), true);
 				
-				while(true){
-					try {
-						// read the input message 
-						String line = in.readLine();
-						while(line!=null){
-							// handle the server input message 
-							parse(line);
-							line = in.readLine();
-						}
-					} catch (Exception e) {
-						e.printStackTrace();	
-					}
-					
-				}
+				in = new BufferedReader(new InputStreamReader(client.getInputStream()));
 			} catch (IOException e) {
 				e.printStackTrace();
-			} catch (IllegalArgumentException e) {
-				e.printStackTrace();
-			} catch (Exception e) {
-				e.printStackTrace();
 			}
+			
+			ClientHandler handler  = new ClientHandler(in);
+			listener = new Thread(handler);
+			listener.start();
 		}
 		
 		
 		/**
 		 * Handler of the server message
+		 * @param json string of server message
 		 */
-		public void parse(String serverMessage){
+		private void parse(String serverMessage){
 			GsonBuilder  gsonBuilder = new GsonBuilder();
 			
 			gsonBuilder.registerTypeAdapter(Message.class, new MessageFactory());
 			Gson gson = gsonBuilder.create();
-			
 			ToClientMessage Message = gson.fromJson(serverMessage, Message.class);
 			
-			
 			try {
+				
 				Message.accept(this);
 			} catch (ErrorTypeException e) {
 				e.printStackTrace();
@@ -120,12 +124,36 @@ public class ChatModel implements ClientMessageVisitor<Void>{
 		}
 		
 		/**
+		 * Sending Request to server 
+		 * @param json string of request
+		 */
+		private void sendRequest(String conversation){
+			synchronized(out){
+				System.err.println("sending "+conversation);
+				out.println(conversation);
+				out.flush();
+			}
+			
+			if(outputDebugger!=null){
+				outputDebugger.print(conversation);
+				outputDebugger.flush();
+			}
+			
+			if(fullDebugger!=null){
+				synchronized(fullDebugger){
+					fullDebugger.print(conversation);
+					fullDebugger.flush();
+				}
+			}
+		}
+		
+		/**
 		 * Login method of the chat model 
 		 * @param String of the user name 
 		 */
 		public void login(String username){
 			SignInAndOut signIn = new SignInAndOut(username, true);
-			
+			sendRequest(signIn.toJSONString());
 		}
 		
 		/**
@@ -133,15 +161,8 @@ public class ChatModel implements ClientMessageVisitor<Void>{
 		 * @param String of the user name 
 		 */
 		public void logOut(String username){
-			
-		}
-		
-		/**
-		 * update userlist
-		 * @param new array list of string of online users
-		 */
-		public void updateUsers(ArrayList<String> String){
-			
+			SignInAndOut signOut = new SignInAndOut(username, false);
+			sendRequest(signOut.toJSONString());
 		}
 		
 		
@@ -163,14 +184,6 @@ public class ChatModel implements ClientMessageVisitor<Void>{
 		}
 		
 		/**
-		 * Sending Request to server 
-		 * @param json string of request
-		 */
-		public void sendRequest(String conversation){
-			
-		}
-		
-		/**
 		 * receiving message from server 
 		 * @param sender of the message 
 		 * @param chat room name of the message 
@@ -186,7 +199,7 @@ public class ChatModel implements ClientMessageVisitor<Void>{
 		 * @param out
 		 */
 		public void outputDebugger(OutputStream out){
-			outputTranscript = new PrintWriter(out,true);
+			outputDebugger = new PrintWriter(out,true);
 		}
 
 		@Override
@@ -207,11 +220,62 @@ public class ChatModel implements ClientMessageVisitor<Void>{
 			return null;
 		}
 
+		
+		/**
+		 * Handler method of the Userlist object, updateing the userlist of the client model  
+		 * @param Userlist 
+		 */
 		@Override
 		public Void visit(Userlsit t) {
-			// TODO Auto-generated method stub
+			System.err.println("update client user list.");
+			// update user list 
+			synchronized (this) {
+				users = t.getNewUsers();
+			}
 			return null;
 		}
-
 		
+		/**
+		 * Debugger method of the user number 
+		 * @return the number of users at client side   
+		 */
+		public synchronized int getUserNumber(){
+			return users.size();
+		}
+		
+		/*
+		 * private class that listen to the server input
+		 */
+		private class ClientHandler implements Runnable{
+			private BufferedReader in;
+			
+			public ClientHandler(BufferedReader in) {
+				this.in = in;
+			}
+			@Override
+			public void run() {
+				try {
+					System.out.println("connecting server");
+					
+					while(true){
+						try {
+							
+							String line = in.readLine();
+							while(line!=null){
+								// handle the server input message 
+								parse(line);
+								line = in.readLine();
+							}
+						} catch (Exception e) {
+							e.printStackTrace();	
+						}
+					}
+				} catch (IllegalArgumentException e) {
+					e.printStackTrace();
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+			
+		}
 }

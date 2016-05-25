@@ -1,12 +1,15 @@
 package message;
 
 import java.lang.reflect.Type;
+import java.util.ArrayList;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
+import com.google.gson.reflect.TypeToken;
 
 /*
  * It's a factory of converting input JSON string to correspond Message Object. 
@@ -23,6 +26,8 @@ public class MessageFactory implements JsonDeserializer<Message>{
 	    
 		final String type = jsontype.getAsString();
 	    
+		System.err.println(type);
+		
 	    switch (type) {
 	    case"SIGNIN":
 			return new SignInAndOut(
@@ -40,7 +45,6 @@ public class MessageFactory implements JsonDeserializer<Message>{
 					jsonObject.get("content").getAsString(),
 					jsonObject.get("from").getAsString());
 		case"JOIN":
-			System.err.println(jsonObject.get("conversation").getAsString());
 			return new ConvOps(
 					jsonObject.get("username").getAsString(),
 					true,
@@ -52,7 +56,11 @@ public class MessageFactory implements JsonDeserializer<Message>{
 					false,
 					jsonObject.get("conversation").getAsString()
 					);
-	// to client message		
+	// to client message	
+		case "USERLIST":
+			ArrayList<String> users = new Gson().fromJson(jsonObject.get("users")
+					, new TypeToken<ArrayList<String>>(){}.getType());
+			return new Userlsit(users);
 		case "CHATTOCLIENT":
 			return new ChatToClient(
 					jsonObject.get("conversation").getAsString(), 

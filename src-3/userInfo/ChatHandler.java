@@ -1,4 +1,6 @@
 package userInfo;
+import static org.junit.Assert.assertEquals;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -76,9 +78,9 @@ public class ChatHandler implements Runnable ,ServerMessageVisitor<Void>{
 					while(online){
 						try {
 							ToClientMessage message = outputqueue.take();
-						
+						    
 							//System.out.println("Server writing output to port "
-			              //         + ": " + message.toJSONString());
+			                //         + ": " + message.toJSONString());
 							try {
 								out.println(message.toJSONString());
 								out.flush();
@@ -150,7 +152,7 @@ public class ChatHandler implements Runnable ,ServerMessageVisitor<Void>{
 			
 			gsonBuilder.registerTypeAdapter(Message.class, new MessageFactory());
 			Gson gson = gsonBuilder.create();
-			
+			System.err.println(jsonString);
 			ToServerMessage Message = gson.fromJson(jsonString, Message.class);
 			
 			/*
@@ -169,13 +171,14 @@ public class ChatHandler implements Runnable ,ServerMessageVisitor<Void>{
 			ToServer log =  s.getType();
 		
 			if(log == ToServer.SIGNIN){
-				
+			
 				// check if the user name is valid
 				if(checkName(username)){
 					
 					AddUser(username);
 				}else{
-					
+					System.err.println("name not valid.");
+
 					out.println(new ErrorMessage("this name is not valid. Please enter a new one").toJSONString());
 					out.flush();
 				}
@@ -378,15 +381,19 @@ public class ChatHandler implements Runnable ,ServerMessageVisitor<Void>{
 				if(server.getUsers().containsKey(username)){
 					out.println(new Hint("This name already been used").toJSONString());
 					out.flush();
+					
 				}else{
 					UserInfo newUser = new UserInfo(this);
 					server.getUsers().put(username, newUser);
 					
 					out.println(new Hint("Welcome "+username+" you are login now").toJSONString());
 					out.flush();
+
 					
+					System.err.println(new Userlsit(server.getUserList()).toJSONString());
 					out.println(new Userlsit(server.getUserList()).toJSONString());
 					out.flush();
+					
 				}
 			}
 		}

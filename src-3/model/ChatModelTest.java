@@ -8,13 +8,14 @@ import java.net.ServerSocket;
 
 import org.junit.Test;
 
+import message.SignInAndOut;
 import server.ChatServer;
 
 public class ChatModelTest {
 	
-	// test if the model can login properly
+	// test if the model can send the login request  properly
 	@Test
-	public void login() throws IOException, InterruptedException{
+	public void loginAndOut() throws IOException, InterruptedException{
 		ServerSocket server = new ServerSocket(10000);
 		ChatServer chatServer =  new ChatServer(server);
 		Thread thread = new Thread(new Runnable() {
@@ -31,15 +32,24 @@ public class ChatModelTest {
 		
 		thread.start();
 		ChatModel chatModel = new ChatModel("localhost", 10000);
-		chatModel.login("Eric");
-		
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
 		chatModel.outputDebugger(bos);
-		Thread.sleep(10);
+		chatModel.start();
+	
+		chatModel.login("EricLu");
+		
+		
+		Thread.sleep(50);
 		// check the output to server
-		String expected = "{\"content\":\"Welcome Eric you are login now\",\"type\":\"HINT\"}";
+		String expected = "{\"username\":\"EricLu\",\"type\":\"SIGNIN\"}";
+		assertEquals(bos.toString(), expected);
+		// check if the client receive the updated userlist 
+		assertEquals( 1,chatModel.getUserNumber());
 		
-		assertEquals(bos.toString(),expected);
-		
+		chatModel.logOut("EricLu");
+		Thread.sleep(50);
+		assertEquals( 0, chatServer.getUserNumber());
+
 	}
+
 }

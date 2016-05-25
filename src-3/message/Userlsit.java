@@ -20,7 +20,6 @@ public class Userlsit implements ToClientMessage{
 		this.users = users;
 	}
 
-	
 	/**
 	 * @return the json string representation of UserList
 	 */
@@ -30,6 +29,13 @@ public class Userlsit implements ToClientMessage{
 		return json;
 	}
 
+	/**
+	 *  @return string array list of latest user list 
+	 */
+	public ArrayList<String> getNewUsers(){
+		return users;
+	}
+	
 	/**
 	 * @return the type of Userlist
 	 */
