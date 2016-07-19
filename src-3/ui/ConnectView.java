@@ -13,6 +13,7 @@ import javax.swing.JPanel;
 import javax.swing.JTextField;
 
 import model.ChatModel;
+import sun.font.TrueTypeFont;
 
 public class ConnectView extends JPanel{
 	
@@ -117,10 +118,14 @@ public class ConnectView extends JPanel{
 		try{
 			//creates the model object that represents the data of the user using the GUI
 			model = new ChatModel(host, Integer.parseInt(port));
-			
+			model.start(this.frame);
 		}
-		catch(Exception e){
-			e.printStackTrace();
+		catch(IOException e){
+			Notification.connectionFailedError();
+			connectButton.setEnabled(true);
+		}catch(NumberFormatException e){
+			Notification.connectionFailedError();
+			connectButton.setEnabled(true);
 		}
 		
 	}

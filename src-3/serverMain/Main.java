@@ -16,7 +16,9 @@ public class Main {
     			if(args.length == 1){
     				int port = Integer.parseInt(args[0]);
     				chatServer = new ChatServer(port);
+    				chatServer.serve();
     			}
+    			
     			
 			} catch (NumberFormatException e) {
 				e.printStackTrace();

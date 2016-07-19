@@ -10,6 +10,8 @@ import java.net.UnknownHostException;
 import java.nio.Buffer;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -18,7 +20,9 @@ import com.sun.corba.se.impl.protocol.giopmsgheaders.Message;
 
 import client.ChatRoom;
 import message.ChatToClient;
+import message.ChatToServer;
 import message.ClientMessageVisitor;
+import message.ConvOps;
 import message.ErrorMessage;
 import message.ErrorTypeException;
 import message.Hint;
@@ -27,6 +31,7 @@ import message.SignInAndOut;
 import message.ToClientMessage;
 import message.ToServerMessage;
 import message.Userlsit;
+import ui.ChatGUI;
 
 /*
  * ChatModel represents the model of the client chat board,
@@ -48,7 +53,9 @@ public class ChatModel implements ClientMessageVisitor<Void>{
 		private PrintWriter out ;
 		private Thread listener;
 		private  ArrayList<String> users;
+		private String username;
 		private final HashMap<String, ChatRoom> rooms;
+		private ChatGUI gui;
 		
 		private PrintWriter outputDebugger,inputDebugger,fullDebugger;
 		/**
@@ -60,45 +67,51 @@ public class ChatModel implements ClientMessageVisitor<Void>{
 		 */
 		
 		public ChatModel(String hostname,Integer portNum) throws IOException {
+			/*
+			 * init the chatmodel 
+			 */
 			this.hostname = hostname;
 			this.port = portNum;
 			this.users = new ArrayList<String>();
 			this.rooms = new HashMap<String, ChatRoom >();
 			
-			/* 
-			 * Initiating the connecting  procedure
-			 */
+			
+		}
+		
+		/**
+		 * @param ChatGUI of the chat system
+		 * Start a new thread to listen to input 
+		 */
+		public void start(ChatGUI gui){
 			
 			try {
+
+				/* 
+				 * Initiating the connecting  procedure
+				 */
+				
 				client = new Socket(hostname, port);
-			} catch (UnknownHostException e) {
+				System.err.println("Connected successfully");
+				out = new PrintWriter(client.getOutputStream(), true);
+				
+				in = new BufferedReader(new InputStreamReader(client.getInputStream()));
+			}  catch (UnknownHostException e) {
 				e.printStackTrace();
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-		
 			
 			/**
 			 * if connecting succeed calling the main board ui and start to run the model
 			 */
-		}
-		
-		/**
-		 * Start a new thread to listen to input 
-		 */
-		public void start(){
-			try {
-				
-				out = new PrintWriter(client.getOutputStream(), true);
-				
-				in = new BufferedReader(new InputStreamReader(client.getInputStream()));
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-			
+			this.gui = gui;
+			gui.setVisible(true);
+			gui.ToLoginView();
+
 			ClientHandler handler  = new ClientHandler(in);
 			listener = new Thread(handler);
 			listener.start();
+			
 		}
 		
 		
@@ -152,8 +165,16 @@ public class ChatModel implements ClientMessageVisitor<Void>{
 		 * @param String of the user name 
 		 */
 		public void login(String username){
-			SignInAndOut signIn = new SignInAndOut(username, true);
-			sendRequest(signIn.toJSONString());
+			if(checkName(username)){
+				SignInAndOut signIn = new SignInAndOut(username, true);
+				sendRequest(signIn.toJSONString());
+				this.username = username;
+			}else{
+				System.err.println("name not valid.");
+
+				out.println(new ErrorMessage("this name is not valid. Please enter a new one").toJSONString());
+				out.flush();
+			}
 		}
 		
 		/**
@@ -165,22 +186,31 @@ public class ChatModel implements ClientMessageVisitor<Void>{
 			sendRequest(signOut.toJSONString());
 		}
 		
+		/**
+		 * Create a new conversation 
+		 * @param conversation name 
+		 */
+		public void createConv(String convName){
+			ConvOps create = new ConvOps(username, true, convName);
+			sendRequest(create.toJSONString());
+		}
 		
 		/**
 		 * Joining a existing conversation 
 		 * @param string of a conversation name
 		 */
-		public void joinConv(){
-			
+		public void joinConv(String convName){
+			ConvOps create = new ConvOps(username, true, convName);
+			sendRequest(create.toJSONString());
 		}
-		
 		
 		/**
 		 * Leave an existing conversation 
 		 * @param string of conversation name
 		 */
 		public void LeaveConv(String conversation ){
-			
+			ConvOps leave = new ConvOps(username, false, conversation);
+			sendRequest(leave.toJSONString());
 		}
 		
 		/**
@@ -190,7 +220,8 @@ public class ChatModel implements ClientMessageVisitor<Void>{
 		 * @param content of the message
 		 */
 		public void updateMessage(String from, String conv, String content){
-			
+			ChatToServer message = new ChatToServer(conv, content, from);
+			sendRequest(message.toJSONString());
 		}
 		
 		
@@ -201,10 +232,17 @@ public class ChatModel implements ClientMessageVisitor<Void>{
 		public void outputDebugger(OutputStream out){
 			outputDebugger = new PrintWriter(out,true);
 		}
-
+		
+		/**
+		 * Handler method of the chat message object, updating the message in the chatroom
+		 * @param ChatToClient object
+		 */
 		@Override
 		public Void visit(ChatToClient t) {
-			// TODO Auto-generated method stub
+			System.err.println("update chat message.");
+			synchronized (this) {
+				rooms.get(t.convName()).updateChat(t.from(), t.content());
+			}
 			return null;
 		}
 
@@ -236,6 +274,18 @@ public class ChatModel implements ClientMessageVisitor<Void>{
 		}
 		
 		/**
+		 * Check whether the given name of client is unique and valid
+		 * A username should start with a-z or A-Z or digits and can also contain [-] or [_]
+		 * @param username
+		 * @return true if the username is valid; otherwise, return false
+		 */
+		private Boolean checkName(String username){
+			final String namePattern = "^[a-zA-Z0-9_-]{5,10}$";
+			Matcher matcher = Pattern.compile(namePattern).matcher(username);
+			return matcher.matches();
+		}
+		
+		/**
 		 * Debugger method of the user number 
 		 * @return the number of users at client side   
 		 */
@@ -243,6 +293,7 @@ public class ChatModel implements ClientMessageVisitor<Void>{
 			return users.size();
 		}
 		
+	
 		/*
 		 * private class that listen to the server input
 		 */

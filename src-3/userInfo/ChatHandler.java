@@ -295,7 +295,7 @@ public class ChatHandler implements Runnable ,ServerMessageVisitor<Void>{
 						conv.addClient(username, this);
 					
 						System.err.println(username+" joined room "+ convName);
-						
+						System.err.println(convs.size());
 					}
 					// should not get here	
 				}

@@ -1,6 +1,14 @@
 package message;
 
+import javax.swing.text.AbstractDocument.Content;
+
+import org.junit.experimental.theories.FromDataPoints;
+
 import com.google.gson.Gson;
+import com.sun.org.apache.regexp.internal.recompile;
+import com.sun.org.apache.xml.internal.resolver.helpers.PublicId;
+
+import jdk.nashorn.internal.ir.annotations.Reference;
 
 /**
  * ChatToClient represent the message that another user sends to other in conversation 
@@ -40,6 +48,27 @@ public class ChatToClient implements ToClientMessage{
 	@Override
 	public ToClient getType() {
 		return type;
+	}
+	
+	/**
+	 * @return name of the conversation 
+	 */
+	public String convName(){
+		return conversation;
+	}
+	
+	/**
+	 * @return name of the speaker
+	 */
+	public String from(){
+		return from;
+	}
+	
+	/**
+	 * @return the content of the message
+	 */
+	public String content(){
+		return content;
 	}
 
 	@Override

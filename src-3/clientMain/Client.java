@@ -19,7 +19,6 @@ public class Client {
     			try {
     				ChatGUI chatBoard = new ChatGUI();
     				chatBoard.setVisible(true);
-    		
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
